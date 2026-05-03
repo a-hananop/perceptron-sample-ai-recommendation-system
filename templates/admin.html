@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Panel — RecoAI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body class="admin-body">
+
+<!-- TOP NAV -->
+<header class="admin-header">
+  <div class="admin-logo">Reco<span>AI</span> <span class="admin-badge">Admin</span></div>
+  <div class="admin-header-right">
+    <span class="admin-user">👤 {{ admin_user }}</span>
+    <a href="/" class="header-link">Live Preview</a>
+    <a href="/admin/logout" class="btn-logout">Sign Out</a>
+  </div>
+</header>
+
+<div class="admin-layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <nav class="sidebar-nav">
+      <div class="sidebar-section-label">Navigation</div>
+      <a href="#api" class="sidebar-link active" data-section="api">
+        <span class="sidebar-icon">⚙</span> API Settings
+      </a>
+      <a href="#config" class="sidebar-link" data-section="config">
+        <span class="sidebar-icon">◈</span> Engine Config
+      </a>
+      <a href="#categories" class="sidebar-link" data-section="categories">
+        <span class="sidebar-icon">◉</span> Categories
+      </a>
+      <a href="#credentials" class="sidebar-link" data-section="credentials">
+        <span class="sidebar-icon">🔐</span> Credentials
+      </a>
+      <div class="sidebar-divider"></div>
+      <a href="/" class="sidebar-link">
+        <span class="sidebar-icon">↗</span> View Preview
+      </a>
+    </nav>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <div class="admin-main">
+
+    <!-- PAGE HEADER -->
+    <div class="page-header">
+      <h1 class="page-title">Dashboard</h1>
+      <p class="page-sub">Manage your AI Recommendation Engine settings and configuration.</p>
+    </div>
+
+    <!-- STATS ROW -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">API Status</div>
+        <div class="stat-value {% if key_set %}stat-green{% else %}stat-red{% endif %}">
+          {% if key_set %}● Connected{% else %}● Not Set{% endif %}
+        </div>
+        <div class="stat-sub">Groq API</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Active Model</div>
+        <div class="stat-value stat-mono">{{ cfg.model.split('-')[0:2]|join('-') }}</div>
+        <div class="stat-sub">{{ cfg.model }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Max Results</div>
+        <div class="stat-value">{{ cfg.max_results }}</div>
+        <div class="stat-sub">Per request</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Requests</div>
+        <div class="stat-value">{{ cfg.total_requests }}</div>
+        <div class="stat-sub">Since setup</div>
+      </div>
+    </div>
+
+    <!-- ── SECTION: API SETTINGS ── -->
+    <div class="admin-section" id="api">
+      <div class="section-header">
+        <h2 class="section-title">⚙ API Settings</h2>
+        <p class="section-sub">Configure your Groq API key and model selection.</p>
+      </div>
+      <div class="section-body">
+        <div class="form-row">
+          <label class="form-label">Groq API Key
+            {% if key_set %}<span class="badge-ok">● Connected</span>{% else %}<span class="badge-warn">● Not Set</span>{% endif %}
+          </label>
+          <div class="input-group">
+            <input type="password" id="apiKeyInput" class="form-input"
+              placeholder="gsk_..." value="{{ cfg.groq_api_key if key_set else '' }}" />
+            <button class="btn-eye" id="toggleKey" title="Show/hide key">👁</button>
+          </div>
+          <div class="form-hint">Get your free API key at <a href="https://console.groq.com" target="_blank" class="form-link">console.groq.com</a></div>
+        </div>
+        <div class="form-row">
+          <label class="form-label">Model</label>
+          <select id="modelSelect" class="form-select">
+            {% for m in models %}
+            <option value="{{ m }}" {% if m == cfg.model %}selected{% endif %}>{{ m }}</option>
+            {% endfor %}
+          </select>
+          <div class="form-hint">llama-3.3-70b-versatile is recommended for best quality.</div>
+        </div>
+        <div class="form-row">
+          <label class="form-label">Temperature: <span id="tempDisplay">{{ cfg.temperature }}</span></label>
+          <input type="range" id="tempSlider" class="form-range" min="0.1" max="1.0" step="0.1"
+            value="{{ cfg.temperature }}" />
+          <div class="form-hint">Higher = more creative. Lower = more focused. Recommended: 0.7</div>
+        </div>
+        <button class="btn-save" id="saveApiBtn">Save API Settings</button>
+        <div class="save-msg" id="apiSaveMsg"></div>
+      </div>
+    </div>
+
+    <!-- ── SECTION: ENGINE CONFIG ── -->
+    <div class="admin-section" id="config">
+      <div class="section-header">
+        <h2 class="section-title">◈ Engine Configuration</h2>
+        <p class="section-sub">Tune recommendation output and AI behavior.</p>
+      </div>
+      <div class="section-body">
+        <div class="form-row">
+          <label class="form-label">Max Recommendations Per Request</label>
+          <select id="maxResultsSelect" class="form-select">
+            {% for n in [2,3,4,5,6,8] %}
+            <option value="{{ n }}" {% if n == cfg.max_results %}selected{% endif %}>{{ n }} recommendations</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-row">
+          <label class="form-label">System Prompt</label>
+          <textarea id="systemPromptInput" class="form-textarea" rows="4">{{ cfg.system_prompt }}</textarea>
+          <div class="form-hint">Defines the AI's persona and instruction style.</div>
+        </div>
+        <button class="btn-save" id="saveConfigBtn">Save Configuration</button>
+        <div class="save-msg" id="configSaveMsg"></div>
+      </div>
+    </div>
+
+    <!-- ── SECTION: CATEGORIES ── -->
+    <div class="admin-section" id="categories">
+      <div class="section-header">
+        <h2 class="section-title">◉ Interest Categories</h2>
+        <p class="section-sub">Manage the interest pills shown on the main page.</p>
+      </div>
+      <div class="section-body">
+        <div class="tags-manager" id="categoriesList">
+          {% for cat in cfg.categories %}
+          <div class="tag-item">
+            <span class="tag-label">{{ cat }}</span>
+            <button class="tag-remove" data-cat="{{ cat }}">×</button>
+          </div>
+          {% endfor %}
+        </div>
+        <div class="add-tag-row">
+          <input type="text" id="newCategoryInput" class="form-input" placeholder="Add new category…" />
+          <button class="btn-add" id="addCategoryBtn">+ Add</button>
+        </div>
+        <button class="btn-save" id="saveCategoriesBtn" style="margin-top:16px;">Save Categories</button>
+        <div class="save-msg" id="catSaveMsg"></div>
+      </div>
+    </div>
+
+    <!-- ── SECTION: CREDENTIALS ── -->
+    <div class="admin-section" id="credentials">
+      <div class="section-header">
+        <h2 class="section-title">🔐 Change Credentials</h2>
+        <p class="section-sub">Update your admin username and password.</p>
+      </div>
+      <div class="section-body">
+        <div class="form-row">
+          <label class="form-label">New Username</label>
+          <input type="text" id="newUsername" class="form-input" placeholder="New username" />
+        </div>
+        <div class="form-row">
+          <label class="form-label">Current Password</label>
+          <input type="password" id="currentPassword" class="form-input" placeholder="Current password" />
+        </div>
+        <div class="form-row">
+          <label class="form-label">New Password</label>
+          <input type="password" id="newPassword" class="form-input" placeholder="Min 6 characters" />
+        </div>
+        <div class="form-row">
+          <label class="form-label">Confirm New Password</label>
+          <input type="password" id="confirmPassword" class="form-input" placeholder="Repeat new password" />
+        </div>
+        <button class="btn-save" id="changePasswordBtn">Update Credentials</button>
+        <div class="save-msg" id="pwSaveMsg"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── Sidebar nav highlighting ─────────────────────────────
+document.querySelectorAll('.sidebar-link[data-section]').forEach(link => {
+  link.addEventListener('click', e => {
+    e.preventDefault();
+    document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+    link.classList.add('active');
+    const section = document.getElementById(link.dataset.section);
+    if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+});
+
+// ── Toggle API key visibility ────────────────────────────
+document.getElementById('toggleKey').addEventListener('click', () => {
+  const input = document.getElementById('apiKeyInput');
+  input.type = input.type === 'password' ? 'text' : 'password';
+});
+
+// ── Temperature slider ───────────────────────────────────
+document.getElementById('tempSlider').addEventListener('input', function() {
+  document.getElementById('tempDisplay').textContent = this.value;
+});
+
+// ── Save API settings ────────────────────────────────────
+document.getElementById('saveApiBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('saveApiBtn');
+  const msg = document.getElementById('apiSaveMsg');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const res = await fetch('/api/admin/config', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        groq_api_key: document.getElementById('apiKeyInput').value.trim(),
+        model: document.getElementById('modelSelect').value,
+        temperature: parseFloat(document.getElementById('tempSlider').value),
+      })
+    });
+    const data = await res.json();
+    showMsg(msg, data.message || data.error, data.success);
+  } catch { showMsg(msg, 'Network error.', false); }
+  finally { btn.disabled = false; btn.textContent = 'Save API Settings'; }
+});
+
+// ── Save engine config ───────────────────────────────────
+document.getElementById('saveConfigBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('saveConfigBtn');
+  const msg = document.getElementById('configSaveMsg');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const res = await fetch('/api/admin/config', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        max_results: parseInt(document.getElementById('maxResultsSelect').value),
+        system_prompt: document.getElementById('systemPromptInput').value,
+      })
+    });
+    const data = await res.json();
+    showMsg(msg, data.message || data.error, data.success);
+  } catch { showMsg(msg, 'Network error.', false); }
+  finally { btn.disabled = false; btn.textContent = 'Save Configuration'; }
+});
+
+// ── Categories manager ───────────────────────────────────
+let categories = {{ cfg.categories | tojson }};
+
+function renderCategories() {
+  const list = document.getElementById('categoriesList');
+  list.innerHTML = categories.map(cat => `
+    <div class="tag-item">
+      <span class="tag-label">${cat}</span>
+      <button class="tag-remove" onclick="removeCategory('${cat}')">×</button>
+    </div>
+  `).join('');
+}
+
+function removeCategory(cat) {
+  categories = categories.filter(c => c !== cat);
+  renderCategories();
+}
+
+document.getElementById('addCategoryBtn').addEventListener('click', () => {
+  const input = document.getElementById('newCategoryInput');
+  const val = input.value.trim();
+  if (val && !categories.includes(val)) {
+    categories.push(val);
+    renderCategories();
+    input.value = '';
+  }
+});
+
+document.getElementById('newCategoryInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('addCategoryBtn').click();
+});
+
+document.getElementById('saveCategoriesBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('saveCategoriesBtn');
+  const msg = document.getElementById('catSaveMsg');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const res = await fetch('/api/admin/config', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ categories })
+    });
+    const data = await res.json();
+    showMsg(msg, data.message || data.error, data.success);
+  } catch { showMsg(msg, 'Network error.', false); }
+  finally { btn.disabled = false; btn.textContent = 'Save Categories'; }
+});
+
+// ── Change password ──────────────────────────────────────
+document.getElementById('changePasswordBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('changePasswordBtn');
+  const msg = document.getElementById('pwSaveMsg');
+  const newU = document.getElementById('newUsername').value.trim();
+  const curr = document.getElementById('currentPassword').value;
+  const newP = document.getElementById('newPassword').value;
+  const conf = document.getElementById('confirmPassword').value;
+
+  if (newP !== conf) { showMsg(msg, 'Passwords do not match.', false); return; }
+  btn.disabled = true; btn.textContent = 'Updating…';
+  try {
+    const res = await fetch('/api/admin/change-password', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ new_username: newU, current_password: curr, new_password: newP })
+    });
+    const data = await res.json();
+    showMsg(msg, data.message || data.error, data.success);
+    if (data.success) setTimeout(() => window.location.href = '/admin/login', 1800);
+  } catch { showMsg(msg, 'Network error.', false); }
+  finally { btn.disabled = false; btn.textContent = 'Update Credentials'; }
+});
+
+// ── Helper ───────────────────────────────────────────────
+function showMsg(el, text, ok) {
+  el.textContent = text;
+  el.className = 'save-msg ' + (ok ? 'msg-ok' : 'msg-err');
+  setTimeout(() => { el.textContent = ''; el.className = 'save-msg'; }, 4000);
+}
+</script>
+</body>
+</html>

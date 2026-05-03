@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Recommendation System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-logo">Reco<span>AI</span></div>
+  <div class="nav-links">
+    <a href="/" class="nav-link active">Live Preview</a>
+    <a href="/admin" class="nav-link">Admin Panel</a>
+  </div>
+  <div class="nav-badge">Powered by Groq</div>
+</nav>
+
+<!-- MAIN -->
+<main class="main">
+  <div class="container">
+
+    <!-- HERO -->
+    <div class="hero">
+      <div class="hero-chip">✦ AI-Powered Recommendations</div>
+      <h1 class="hero-title">Discover What's <em>Perfect</em> for You</h1>
+      <p class="hero-sub">Select your interests and current mood — our AI finds curated recommendations tailored just for you.</p>
+    </div>
+
+    <!-- PREFERENCES -->
+    <div class="pref-section">
+      <div class="pref-block">
+        <div class="pref-label">Your Interests <span class="pref-count" id="interestCount">0 selected</span></div>
+        <div class="pills-grid" id="interestPills">
+          {% for cat in categories %}
+          <button class="pill" data-group="interest" data-val="{{ cat }}">{{ cat }}</button>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="pref-block">
+        <div class="pref-label">Current Mood</div>
+        <div class="pills-row" id="moodPills">
+          {% for mood in moods %}
+          <button class="pill" data-group="mood" data-val="{{ mood }}">{{ mood }}</button>
+          {% endfor %}
+        </div>
+      </div>
+
+      <button class="btn-primary" id="generateBtn">
+        <span class="btn-icon">✦</span>
+        Get My Recommendations
+      </button>
+    </div>
+
+    <!-- LOADING -->
+    <div class="loading-state" id="loadingState">
+      <div class="spinner"></div>
+      <p class="loading-text">AI is finding the best matches for you…</p>
+    </div>
+
+    <!-- EMPTY -->
+    <div class="empty-state" id="emptyState">
+      <div class="empty-icon">◈</div>
+      <p>Select your interests and mood above, then click to generate recommendations.</p>
+    </div>
+
+    <!-- ERROR -->
+    <div class="error-state" id="errorState">
+      <div class="error-icon">⚠</div>
+      <p id="errorMsg">Something went wrong.</p>
+    </div>
+
+    <!-- RESULTS -->
+    <div class="results-section" id="resultsSection">
+      <div class="results-header">
+        <h2 class="results-title">Your Recommendations</h2>
+        <span class="results-model" id="modelBadge"></span>
+      </div>
+      <div class="cards-grid" id="cardsGrid"></div>
+      <button class="btn-secondary" id="regenerateBtn">↻ Regenerate</button>
+    </div>
+
+  </div>
+</main>
+
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
